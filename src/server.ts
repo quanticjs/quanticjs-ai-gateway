@@ -6,21 +6,17 @@ import type { AiProvider, GenerateRequest, GenerateResult } from './types.js';
 import { SdkProvider } from './providers/SdkProvider.js';
 import { AnthropicProvider } from './providers/AnthropicProvider.js';
 
-const logger = pino({
-  name: 'ai-gateway',
-  transport: process.env.NODE_ENV !== 'production'
-    ? { target: 'pino-pretty', options: { colorize: true } }
-    : undefined,
-});
-
+const logger = pino({ name: 'ai-gateway' });
 const app = express();
 app.use(express.json({ limit: '2mb' }));
 
 const PORT = parseInt(process.env.PORT || '3005', 10);
 
+// Redis Stream for async results
 const RESULT_STREAM = 'arex:ai:results';
 const STREAM_MAXLEN = 10000;
 
+// Redis connection
 const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
   maxRetriesPerRequest: 3,
   retryStrategy(times) {
@@ -32,6 +28,7 @@ const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
 redis.on('error', (err) => logger.error({ error: err.message }, 'Redis connection error'));
 redis.on('connect', () => logger.info('Connected to Redis'));
 
+// Provider selection — env var decides which backend to use
 const PROVIDER_NAME = process.env.AI_PROVIDER || 'claude-sdk';
 
 function createProvider(): AiProvider {
@@ -46,6 +43,8 @@ function createProvider(): AiProvider {
 
 const provider = createProvider();
 logger.info({ provider: provider.name }, 'AI provider initialized');
+
+// ── Redis Stream publisher ──────────────────────────────────────────
 
 async function publishResult(result: GenerateResult): Promise<void> {
   try {
@@ -68,10 +67,16 @@ async function publishResult(result: GenerateResult): Promise<void> {
   }
 }
 
+// ── Async processing ────────────────────────────────────────────────
+
 async function processAsync(requestId: string, req: GenerateRequest): Promise<void> {
   try {
     const result = await provider.generate(req);
-    await publishResult({ requestId, status: 'success', ...result });
+    await publishResult({
+      requestId,
+      status: 'success',
+      ...result,
+    });
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Unknown error';
     logger.error({ requestId, error: msg }, 'Generation failed');
@@ -88,10 +93,13 @@ async function processAsync(requestId: string, req: GenerateRequest): Promise<vo
   }
 }
 
+// ── Routes ──────────────────────────────────────────────────────────
+
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', service: 'ai-gateway', provider: provider.name, redis: redis.status });
 });
 
+// Async endpoint — returns 202 immediately, publishes result to Redis Stream
 app.post('/generate', (req, res) => {
   const body = req.body as GenerateRequest;
 
@@ -101,10 +109,13 @@ app.post('/generate', (req, res) => {
   }
 
   const requestId = body.requestId || randomUUID();
+
   res.status(202).json({ requestId, stream: RESULT_STREAM });
+
   processAsync(requestId, body);
 });
 
+// Sync endpoint — blocks until result is ready (for simple callers / testing)
 app.post('/generate/sync', async (req, res) => {
   const body = req.body as GenerateRequest;
 
@@ -122,6 +133,8 @@ app.post('/generate/sync', async (req, res) => {
     res.status(500).json({ error: msg });
   }
 });
+
+// ── Start ───────────────────────────────────────────────────────────
 
 app.listen(PORT, '0.0.0.0', () => {
   logger.info({ port: PORT, provider: provider.name, resultStream: RESULT_STREAM }, 'AI Gateway listening');

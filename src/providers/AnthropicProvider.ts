@@ -3,13 +3,7 @@ import type { AiProvider, GenerateRequest, GenerateResponse } from '../types.js'
 
 const logger = pino({ name: 'ai-gateway:anthropic' });
 
-const DEFAULT_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-20250514';
-
-const MODEL_COSTS: Record<string, { input: number; output: number }> = {
-  'claude-sonnet-4-20250514': { input: 3, output: 15 },
-  'claude-opus-4-20250514': { input: 15, output: 75 },
-  'claude-haiku-3-5-20241022': { input: 0.8, output: 4 },
-};
+const DEFAULT_MODEL = process.env.AI_MODEL || 'claude-sonnet-4-5-20250929';
 
 export class AnthropicProvider implements AiProvider {
   readonly name = 'anthropic-api';
@@ -29,8 +23,8 @@ export class AnthropicProvider implements AiProvider {
 
     const model = DEFAULT_MODEL;
     const maxTokens = req.maxTokens || 8192;
-    const startTime = Date.now();
 
+    const startTime = Date.now();
     logger.info({ promptLength: req.userPrompt.length, model, hasSchema: !!req.jsonSchema }, 'Starting Anthropic API call');
 
     const body: Record<string, unknown> = {
@@ -69,12 +63,17 @@ export class AnthropicProvider implements AiProvider {
 
     const inputTokens = data.usage.input_tokens;
     const outputTokens = data.usage.output_tokens;
-    const costRates = MODEL_COSTS[model] ?? { input: 3, output: 15 };
-    const costUsd = (inputTokens * costRates.input + outputTokens * costRates.output) / 1_000_000;
+    const costUsd = (inputTokens * 3 + outputTokens * 15) / 1_000_000;
 
     const elapsed = Date.now() - startTime;
     logger.info({ model: data.model, inputTokens, outputTokens, costUsd, elapsed }, 'Anthropic API call complete');
 
-    return { content, model: data.model, inputTokens, outputTokens, costUsd };
+    return {
+      content,
+      model: data.model,
+      inputTokens,
+      outputTokens,
+      costUsd,
+    };
   }
 }
