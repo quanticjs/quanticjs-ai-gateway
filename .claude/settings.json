@@ -5,6 +5,7 @@
       "Bash(npm ci)",
       "Bash(npm run *)",
       "Bash(npm test *)",
+      "Bash(npm init *)",
       "Bash(npx *)",
       "Bash(node *)",
       "Bash(ls *)",
@@ -22,8 +23,7 @@
       "Bash(git commit *)",
       "Bash(docker compose *)",
       "Bash(docker build *)",
-      "Bash(docker ps*)",
-      "Bash(curl -s http://localhost:3005/*)"
+      "Bash(docker ps*)"
     ]
   },
   "hooks": {
@@ -61,5 +61,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true
   }
 }

@@ -103,13 +103,26 @@ Extend `KafkaEventConsumer` from `@quanticjs/events-kafka`. The base class handl
 ### Generic Consumer (all events for a category)
 
 ```typescript
-import { Injectable } from '@nestjs/common';
-import { KafkaEventConsumer, KafkaEvent } from '@quanticjs/events-kafka';
+import { Inject, Injectable } from '@nestjs/common';
+import {
+  KafkaEventConsumer,
+  KafkaEventMetrics,
+  KAFKA_OPTIONS,
+  type KafkaEvent,
+  type KafkaEventsModuleOptions,
+} from '@quanticjs/events-kafka';
 
 @Injectable()
 export class ItemEventConsumer extends KafkaEventConsumer {
   readonly topic = 'quantic.events.items';
   readonly groupId = 'project-planning';
+
+  constructor(
+    @Inject(KAFKA_OPTIONS) config: KafkaEventsModuleOptions,
+    @Inject('KAFKA_METRICS') metrics: KafkaEventMetrics,
+  ) {
+    super(config, metrics);
+  }
 
   protected shouldHandle(event: KafkaEvent): boolean {
     return event.type === 'item.created';
@@ -129,6 +142,13 @@ export class ItemEventConsumer extends KafkaEventConsumer {
 export class CrTaskCreatedConsumer extends KafkaEventConsumer {
   readonly topic = 'quantic.events.TaskCreatedEvents.cr-approval';
   readonly groupId = 'delivery-hub-cr';
+
+  constructor(
+    @Inject(KAFKA_OPTIONS) config: KafkaEventsModuleOptions,
+    @Inject('KAFKA_METRICS') metrics: KafkaEventMetrics,
+  ) {
+    super(config, metrics);
+  }
 
   async handleMessage(event: KafkaEvent): Promise<void> {
     // Only cr-approval TaskCreated events arrive here — no filtering needed
@@ -186,7 +206,8 @@ Trace context (W3C `traceparent`/`tracestate`) is propagated automatically throu
 - ALWAYS use outbox pattern — never publish directly to Kafka (data loss on crash)
 - OutboxEvent is saved in the SAME transaction as the entity mutation
 - Import `DomainEvent` and `OutboxEvent` from `@quanticjs/events-core`
-- Import `KafkaEventConsumer` and `KafkaEvent` from `@quanticjs/events-kafka`
+- Import `KafkaEventConsumer`, `KafkaEvent`, `KAFKA_OPTIONS`, `KafkaEventMetrics` from `@quanticjs/events-kafka`
+- All consumer constructors inject `@Inject(KAFKA_OPTIONS) config` and `@Inject('KAFKA_METRICS') metrics`, pass to `super(config, metrics)`
 - Event payloads should be minimal — include IDs, not full entities
 - Consumers must be idempotent — events may be delivered more than once
 - For workflow events, use per-definition topics — never subscribe to a generic topic and filter

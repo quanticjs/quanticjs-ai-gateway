@@ -1,5 +1,10 @@
 # Fix Bug
 
+## Usage
+```
+/fix-bug <issue-number-or-description>
+```
+
 ## Process (this order is mandatory)
 
 ### Step 1: Reproduce
@@ -9,8 +14,8 @@
 
 ### Step 2: Regression Test FIRST
 - Write a test that reproduces the bug
-- Run it — **verify it fails**
-- If the test passes, your test is wrong
+- Run it — **verify it fails** (this proves the bug exists and the test catches it)
+- If the test passes, your test is wrong — it does not reproduce the bug
 
 ### Step 3: Fix
 - Analyze the root cause (not just the symptom)
@@ -19,10 +24,10 @@
 - Run `npm run build && npm test` — verify nothing else broke
 
 ### Step 4: Commit
-- Commit with message: `fix: <what-was-fixed>`
+- Commit with message: `fix: <what-was-fixed> (#<issue-number>)`
 
 ## Rules
-- The regression test MUST exist before the fix
+- The regression test MUST exist before the fix — no exceptions
 - Fix the root cause, not the symptom
 - Keep the fix minimal — don't refactor surrounding code
 - Follow project conventions in CLAUDE.md and `.claude/rules/`

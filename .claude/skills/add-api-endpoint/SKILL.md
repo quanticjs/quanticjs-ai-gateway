@@ -1,26 +1,59 @@
 # Add API Endpoint
 
+Wire a CQRS handler to an HTTP endpoint with DTO validation and a thin controller.
+
+## Usage
+```
+/add-api-endpoint POST /project/items
+/add-api-endpoint GET /identity/users/:id
+```
+
 ## Steps
-1. **Create handler** via `/add-handler`
-2. **Create DTO** with class-validator + @ApiProperty decorators in `dtos/`
-3. **Create response DTO** (typed, never raw objects)
-4. **Add thin controller method:**
+1. **Create handler** — run `/add-handler` for the command/query + validator + handler
+2. **Create DTO** with class-validator decorators (controller-layer validation):
    ```typescript
-   @Post('sync')
-   @HttpCode(200)
-   @ApiOperation({ summary: 'Generate AI response (synchronous)' })
-   @ApiResponse({ status: 200, description: 'AI response generated' })
-   @ApiResponse({ status: 400, description: 'Invalid request' })
-   async generateSync(@Body() dto: GenerateRequestDto) {
-     return this.commandBus.execute(
-       new GenerateSyncCommand(dto.systemPrompt, dto.userPrompt, ...),
-     );
+   import { IsString, IsNotEmpty, MaxLength } from 'class-validator';
+   import { ApiProperty } from '@nestjs/swagger';
+
+   export class CreateItemDto {
+     @ApiProperty({ description: 'Item name', minLength: 1, maxLength: 100 })
+     @IsString()
+     @IsNotEmpty()
+     @MaxLength(100)
+     name: string;
    }
    ```
-5. **Register** handler in module providers
+3. **Create response DTO:**
+   ```typescript
+   export class ItemResponseDto {
+     @ApiProperty()
+     id: string;
+
+     @ApiProperty()
+     name: string;
+
+     @ApiProperty()
+     createdAt: Date;
+   }
+   ```
+4. **Add controller method** — THIN pattern:
+   ```typescript
+   @Post()
+   @ApiOperation({ summary: 'Create a new item' })
+   @ApiResponse({ status: 201, type: ItemResponseDto })
+   @ApiResponse({ status: 400, type: ErrorResponseDto })
+   async create(@Body() dto: CreateItemDto): Promise<ItemResponseDto> {
+     return this.commandBus.execute(new CreateItemCommand(dto.name, dto.description));
+   }
+   ```
+5. Register handler in module's `providers` array (if not done in step 1)
+6. **Add backend tests** — run `/write-backend-tests` for handler, validator, and controller
+7. `npm run build && npm run test`
 
 ## Rules
-- Controller ONLY parses request → dispatches to bus → returns
-- No services or repositories in controllers — CommandBus/QueryBus only
-- Every endpoint needs @ApiOperation + @ApiResponse decorators
-- Every DTO needs class-validator decorators + @ApiProperty
+- Controller does NOTHING except parse request → commandBus/queryBus → return
+- DTO uses class-validator for shape validation; business rules stay in the Zod validator (created by `/add-handler`)
+- ALL repo access via `getTransactionalRepo()` — UnitOfWork is automatic
+- Every endpoint annotated with `@ApiOperation`, `@ApiResponse`, `@ApiBody`, `@ApiTags`
+- All API responses use typed response DTOs — never raw entity objects
+- Error responses use RFC 9457 problem-details shape
