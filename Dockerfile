@@ -1,6 +1,5 @@
 FROM node:20-alpine
 
-# Install bash (Claude CLI needs a POSIX shell)
 RUN apk add --no-cache bash git
 
 WORKDIR /app
@@ -18,16 +17,21 @@ COPY package.json package-lock.json* ./
 
 RUN npm install
 
-# Copy source
+# Copy source & config
 COPY src ./src
-COPY tsconfig.json ./
+COPY tsconfig.json nest-cli.json ./
 
 # Build
-RUN npx tsc
+RUN npx nest build
 
 # Ensure node user owns the app directory
 RUN chown -R node:node /app
 
+USER node
+
 EXPOSE 3005
 
-CMD ["node", "dist/server.js"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+  CMD wget -qO- http://localhost:3005/health/live || exit 1
+
+CMD ["node", "dist/main"]
