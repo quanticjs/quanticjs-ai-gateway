@@ -24,7 +24,7 @@ docker compose exec redis redis-cli MONITOR
 ```bash
 docker compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
 docker compose exec kafka kafka-consumer-groups --describe --group ai-gateway-results --bootstrap-server localhost:9092
-docker compose exec kafka kafka-console-consumer --topic arex.events.generations.dlq --from-beginning --bootstrap-server localhost:9092
+docker compose exec kafka kafka-console-consumer --topic quantic.events.generations.dlq --from-beginning --bootstrap-server localhost:9092
 ```
 
 ### Running Specific Tests

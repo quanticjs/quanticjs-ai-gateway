@@ -53,7 +53,7 @@ Events use the **outbox pattern** — the event record is written to the databas
    }
    ```
 
-2. **Topic name** is derived from eventType: `item.created` → `arex.events.items`
+2. **Topic name** is derived from eventType: `item.created` → `quantic.events.items`
 
 3. **OutboxPublisherService** (from `@quanticjs/events-core`) polls pending events:
    - Reads pending OutboxEvents every 100ms (batch of 50)
@@ -65,13 +65,13 @@ Events use the **outbox pattern** — the event record is written to the databas
 QuanticFlow publishes workflow events with a **routing key** (the definition ID). This produces per-definition topics so consumers only receive events for their workflow type:
 
 ```
-arex.events.<EventType>s.<routingKey>
+quantic.events.<EventType>s.<routingKey>
 ```
 
 | Event | Routing Key | Topic |
 |---|---|---|
-| `TaskCreatedEvent` | `cr-approval` | `arex.events.TaskCreatedEvents.cr-approval` |
-| `ProcessCompletedEvent` | `po-approval` | `arex.events.ProcessCompletedEvents.po-approval` |
+| `TaskCreatedEvent` | `cr-approval` | `quantic.events.TaskCreatedEvents.cr-approval` |
+| `ProcessCompletedEvent` | `po-approval` | `quantic.events.ProcessCompletedEvents.po-approval` |
 
 To add a routing key to your own domain events:
 
@@ -83,18 +83,18 @@ const event = new DomainEvent(
   undefined,                // organizationId (optional)
   order.warehouseId,        // routingKey — appended to topic
 );
-// Topic: arex.events.orders.warehouse-123
+// Topic: quantic.events.orders.warehouse-123
 ```
 
-Without a routing key, the topic is just `arex.events.<category>s` (generic, shared).
+Without a routing key, the topic is just `quantic.events.<category>s` (generic, shared).
 
 ## Event Naming Convention
 | Event Type | Topic | When |
 |------------|-------|------|
-| `item.created` | `arex.events.items` | After entity creation |
-| `item.updated` | `arex.events.items` | After entity update |
-| `item.deleted` | `arex.events.items` | After soft delete |
-| `project.status.changed` | `arex.events.projects` | After status transition |
+| `item.created` | `quantic.events.items` | After entity creation |
+| `item.updated` | `quantic.events.items` | After entity update |
+| `item.deleted` | `quantic.events.items` | After soft delete |
+| `project.status.changed` | `quantic.events.projects` | After status transition |
 
 ## Consuming Events
 
@@ -108,7 +108,7 @@ import { KafkaEventConsumer, KafkaEvent } from '@quanticjs/events-kafka';
 
 @Injectable()
 export class ItemEventConsumer extends KafkaEventConsumer {
-  readonly topic = 'arex.events.items';
+  readonly topic = 'quantic.events.items';
   readonly groupId = 'project-planning';
 
   protected shouldHandle(event: KafkaEvent): boolean {
@@ -127,7 +127,7 @@ export class ItemEventConsumer extends KafkaEventConsumer {
 ```typescript
 @Injectable()
 export class CrTaskCreatedConsumer extends KafkaEventConsumer {
-  readonly topic = 'arex.events.TaskCreatedEvents.cr-approval';
+  readonly topic = 'quantic.events.TaskCreatedEvents.cr-approval';
   readonly groupId = 'delivery-hub-cr';
 
   async handleMessage(event: KafkaEvent): Promise<void> {
@@ -173,7 +173,7 @@ async handleMessage(event: KafkaEvent): Promise<void> {
 - DLQ payload includes `errorCategory: 'PROCESSING'`
 
 **General:**
-- Dead-letter topic: `{topic}.dlq` (e.g., `arex.events.orders.dlq`) with 30-day retention
+- Dead-letter topic: `{topic}.dlq` (e.g., `quantic.events.orders.dlq`) with 30-day retention
 - Failed events are NEVER silently dropped
 - Long-running handlers (>30s) MUST call `this.heartbeat()` periodically
 - If a downstream dependency is unhealthy, call `this.pause()` to stop fetching; `this.resume()` when recovered
