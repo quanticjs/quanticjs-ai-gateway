@@ -2,7 +2,7 @@
 
 ## Stack
 
-- **Backend:** NestJS, CQRS with `@quanticjs/core`, Redis, Prometheus metrics, OpenTelemetry tracing
+- **Backend:** NestJS, CQRS with `@quanticjs/core`, Kafka (`@quanticjs/events-kafka`), Redis, Prometheus metrics, OpenTelemetry tracing
 - **AI Providers:** Claude SDK (`@anthropic-ai/claude-agent-sdk`), Anthropic API (direct HTTP)
 - **Embedding:** TEI (Text Embeddings Inference) via HTTP
 - **Infrastructure:** Docker, Kubernetes + Helm
@@ -35,7 +35,7 @@
 | Method | Path | Purpose |
 |--------|------|---------|
 | `POST` | `/generate/sync` | Synchronous AI generation |
-| `POST` | `/generate` | Async AI generation (returns requestId, publishes to Redis stream) |
+| `POST` | `/generate` | Async AI generation (returns requestId, publishes to Kafka) |
 | `POST` | `/embed` | Batch text embedding |
 | `POST` | `/embed/single` | Single text embedding |
 | `GET` | `/health/live` | Liveness probe |
@@ -52,6 +52,10 @@
 | `ANTHROPIC_API_KEY` | Anthropic API key | — |
 | `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token for SDK | — |
 | `TEI_URL` | TEI service URL | `http://text-embeddings:8080` |
+| `KAFKA_BROKERS` | Kafka broker addresses (comma-separated) | `localhost:9092` |
+| `KAFKA_SSL` | Enable Kafka SSL | — |
+| `KAFKA_SASL_USERNAME` | Kafka SASL username | — |
+| `KAFKA_SASL_PASSWORD` | Kafka SASL password | — |
 
 ## Skill Routing
 
@@ -61,7 +65,7 @@
 | Create a new domain module | `/add-module` |
 | Wire a handler to an HTTP endpoint | `/add-api-endpoint` |
 | Add a new AI provider (OpenAI, Gemini, etc.) | `/add-integration` |
-| Add Redis stream events | `/add-event` |
+| Add domain events (Kafka) | `/add-event` |
 | Write backend tests | `/write-backend-tests` |
 | Run the test suite | `/run-tests` |
 | Fix a bug (TDD workflow) | `/fix-bug` |

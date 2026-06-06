@@ -4,6 +4,7 @@ import { LoggerModule } from 'nestjs-pino';
 import { QuanticModule } from '@quanticjs/quanticjs';
 import { QuanticMetricsModule } from '@quanticjs/metrics';
 import { QuanticHealthModule } from '@quanticjs/health';
+import { QuanticEventsKafkaModule } from '@quanticjs/events-kafka';
 
 import { GenerateModule } from './generate/generate.module';
 import { EmbedModule } from './embed/embed.module';
@@ -27,7 +28,19 @@ import { EmbedModule } from './embed/embed.module';
 
     QuanticModule.forRoot({
       redis: { url: process.env.REDIS_URL ?? 'redis://localhost:6379' },
-      events: true,
+    }),
+
+    QuanticEventsKafkaModule.forRoot({
+      brokers: (process.env.KAFKA_BROKERS ?? 'localhost:9092').split(','),
+      clientId: 'ai-gateway',
+      ssl: process.env.KAFKA_SSL === 'true' ? true : undefined,
+      sasl: process.env.KAFKA_SASL_USERNAME
+        ? {
+            mechanism: 'scram-sha-512',
+            username: process.env.KAFKA_SASL_USERNAME,
+            password: process.env.KAFKA_SASL_PASSWORD!,
+          }
+        : undefined,
     }),
 
     QuanticMetricsModule.forRoot(),

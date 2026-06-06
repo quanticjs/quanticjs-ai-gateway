@@ -9,5 +9,4 @@ export class GenerateResponseDto {
 
 export class AsyncGenerateResponseDto {
   requestId!: string;
-  stream!: string;
 }
