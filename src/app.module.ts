@@ -33,6 +33,7 @@ import { EmbedModule } from './embed/embed.module';
     QuanticEventsKafkaModule.forRoot({
       brokers: (process.env.KAFKA_BROKERS ?? 'localhost:9092').split(','),
       clientId: 'ai-gateway',
+      outbox: false,
       ssl: process.env.KAFKA_SSL === 'true' ? true : undefined,
       sasl: process.env.KAFKA_SASL_USERNAME
         ? {
