@@ -55,11 +55,17 @@ export class SdkProvider implements AiProvider {
       options: {
         model,
         systemPrompt: request.systemPrompt,
-        tools: [],
+        disallowedTools: [
+          'Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep',
+          'WebSearch', 'WebFetch', 'Agent', 'Skill', 'Monitor',
+          'NotebookEdit', 'SendUserFile', 'ToolSearch',
+          'EnterPlanMode', 'ExitPlanMode',
+        ],
         maxTurns: 1,
         persistSession: false,
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
+        settingSources: [],
       } as any,
     });
 
