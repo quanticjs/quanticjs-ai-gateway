@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { CommandBus } from '@nestjs/cqrs';
+import { CommandBus, ICommand } from '@nestjs/cqrs';
 import {
-  KafkaEventConsumer,
+  CqrsKafkaConsumer,
   KafkaEventMetrics,
   KAFKA_OPTIONS,
   type KafkaEvent,
@@ -11,20 +11,20 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { SubmitGenerationCommand } from '../commands/submit-generation.command';
 
 @Injectable()
-export class AiRequestConsumer extends KafkaEventConsumer {
+export class AiRequestConsumer extends CqrsKafkaConsumer {
   readonly topic = 'quantic.commands.ai-generate';
   readonly groupId = 'ai-gateway-generate';
 
   constructor(
     @Inject(KAFKA_OPTIONS) config: KafkaEventsModuleOptions,
     @Inject('KAFKA_METRICS') metrics: KafkaEventMetrics,
+    commandBus: CommandBus,
     @InjectPinoLogger(AiRequestConsumer.name) private readonly appLogger: PinoLogger,
-    private readonly commandBus: CommandBus,
   ) {
-    super(config, metrics);
+    super(config, metrics, commandBus);
   }
 
-  async handleMessage(event: KafkaEvent): Promise<void> {
+  mapToCommand(event: KafkaEvent): ICommand | null {
     const payload = typeof event.payload === 'string'
       ? JSON.parse(event.payload) as Record<string, unknown>
       : event.payload;
@@ -40,7 +40,7 @@ export class AiRequestConsumer extends KafkaEventConsumer {
 
     if (!systemPrompt || !userPrompt) {
       this.appLogger.warn({ payload }, 'Invalid AI request — missing prompts');
-      return;
+      return null;
     }
 
     this.appLogger.info(
@@ -48,17 +48,15 @@ export class AiRequestConsumer extends KafkaEventConsumer {
       'AI generation request received via Kafka',
     );
 
-    await this.commandBus.execute(
-      new SubmitGenerationCommand(
-        systemPrompt,
-        userPrompt,
-        maxTokens,
-        model,
-        jsonSchema,
-        purpose,
-        callerService,
-        metadata,
-      ),
+    return new SubmitGenerationCommand(
+      systemPrompt,
+      userPrompt,
+      maxTokens,
+      model,
+      jsonSchema,
+      purpose,
+      callerService,
+      metadata,
     );
   }
 }

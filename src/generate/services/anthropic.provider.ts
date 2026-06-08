@@ -68,6 +68,15 @@ export class AnthropicProvider implements AiProvider {
       messages: [{ role: 'user', content: request.userPrompt }],
     };
 
+    if (request.jsonSchema) {
+      body.tools = [{
+        name: 'structured_output',
+        description: 'Return the result in the required JSON schema',
+        input_schema: request.jsonSchema,
+      }];
+      body.tool_choice = { type: 'tool', name: 'structured_output' };
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 5 * 60 * 1000);
 
@@ -91,15 +100,21 @@ export class AnthropicProvider implements AiProvider {
     }
 
     const data = (await response.json()) as {
-      content: Array<{ type: string; text: string }>;
+      content: Array<{ type: string; text?: string; input?: unknown }>;
       model: string;
       usage: { input_tokens: number; output_tokens: number };
     };
 
-    const content = data.content
-      .filter((block) => block.type === 'text')
-      .map((block) => block.text)
-      .join('');
+    let content = '';
+    if (request.jsonSchema) {
+      const toolBlock = data.content.find((b) => b.type === 'tool_use');
+      content = toolBlock?.input ? JSON.stringify(toolBlock.input) : '';
+    } else {
+      content = data.content
+        .filter((block) => block.type === 'text')
+        .map((block) => block.text)
+        .join('');
+    }
 
     const inputTokens = data.usage.input_tokens;
     const outputTokens = data.usage.output_tokens;
