@@ -62,7 +62,7 @@ describe('SubmitGenerationHandler', () => {
   });
 
   it('should return success with a requestId immediately', async () => {
-    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, undefined);
+    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, undefined, undefined);
     const result = await handler.execute(command);
 
     expect(result.isSuccess).toBe(true);
@@ -72,7 +72,7 @@ describe('SubmitGenerationHandler', () => {
   });
 
   it('should fire background generation and publish generation.completed event', async () => {
-    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, 'test', 'svc');
+    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, 'test', 'svc', undefined);
     await handler.execute(command);
 
     await new Promise((r) => setTimeout(r, 100));
@@ -93,7 +93,7 @@ describe('SubmitGenerationHandler', () => {
   });
 
   it('should record success metrics after background completion', async () => {
-    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, undefined);
+    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, undefined, undefined);
     await handler.execute(command);
 
     await new Promise((r) => setTimeout(r, 100));
@@ -103,7 +103,7 @@ describe('SubmitGenerationHandler', () => {
 
   it('should publish generation.failed event when provider throws', async () => {
     provider.generate.mockRejectedValue(new Error('Provider down'));
-    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, 'svc');
+    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, 'svc', undefined);
     await handler.execute(command);
 
     await new Promise((r) => setTimeout(r, 100));
@@ -117,7 +117,7 @@ describe('SubmitGenerationHandler', () => {
 
   it('should record error metrics when provider throws', async () => {
     provider.generate.mockRejectedValue(new Error('fail'));
-    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, undefined);
+    const command = new SubmitGenerationCommand('sys', 'usr', undefined, undefined, undefined, undefined, undefined, undefined);
     await handler.execute(command);
 
     await new Promise((r) => setTimeout(r, 100));

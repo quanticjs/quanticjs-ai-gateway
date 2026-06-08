@@ -44,6 +44,7 @@ export class GenerateController {
         dto.jsonSchema,
         dto.purpose,
         dto.callerService,
+        dto.metadata,
       ),
     );
   }

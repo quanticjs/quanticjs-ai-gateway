@@ -6,6 +6,7 @@ import { GenerateSyncHandler } from './commands/generate-sync.handler';
 import { GenerateSyncValidator } from './commands/generate-sync.validator';
 import { SubmitGenerationHandler } from './commands/submit-generation.handler';
 import { SubmitGenerationValidator } from './commands/submit-generation.validator';
+import { AiRequestConsumer } from './consumers/ai-request.consumer';
 import { SdkProvider } from './services/sdk.provider';
 import { AnthropicProvider } from './services/anthropic.provider';
 import { AI_PROVIDER } from './services/ai-provider.interface';
@@ -19,6 +20,7 @@ import { GenerateMetrics } from './generate.metrics';
     GenerateSyncValidator,
     SubmitGenerationHandler,
     SubmitGenerationValidator,
+    AiRequestConsumer,
     GenerateMetrics,
     SdkProvider,
     AnthropicProvider,

@@ -14,6 +14,7 @@ describe('SubmitGenerationValidator', () => {
       overrides.jsonSchema,
       overrides.purpose,
       overrides.callerService,
+      overrides.metadata,
     );
   }
 

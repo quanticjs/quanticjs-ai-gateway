@@ -11,6 +11,7 @@ export class SubmitGenerationValidator implements ICommandValidator<SubmitGenera
     jsonSchema: z.record(z.unknown()).optional(),
     purpose: z.string().max(200).optional(),
     callerService: z.string().max(100).optional(),
+    metadata: z.record(z.unknown()).optional(),
   });
 
   validate(command: SubmitGenerationCommand) {

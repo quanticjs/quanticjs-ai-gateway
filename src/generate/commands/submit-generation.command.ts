@@ -11,5 +11,6 @@ export class SubmitGenerationCommand {
     public readonly jsonSchema: Record<string, unknown> | undefined,
     public readonly purpose: string | undefined,
     public readonly callerService: string | undefined,
+    public readonly metadata: Record<string, unknown> | undefined,
   ) {}
 }

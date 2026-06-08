@@ -41,4 +41,9 @@ export class GenerateRequestDto {
   @IsString()
   @MaxLength(100)
   callerService?: string;
+
+  @ApiPropertyOptional({ description: 'Pass-through metadata returned in the response event' })
+  @IsOptional()
+  @IsObject()
+  metadata?: Record<string, unknown>;
 }

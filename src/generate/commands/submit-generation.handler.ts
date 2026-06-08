@@ -69,7 +69,10 @@ export class SubmitGenerationHandler implements ICommandHandler<SubmitGeneration
               durationMs: response.durationMs,
               purpose: command.purpose,
               callerService: command.callerService,
+              metadata: command.metadata,
             },
+            undefined,
+            command.callerService,
           ),
         );
       })
@@ -83,7 +86,13 @@ export class SubmitGenerationHandler implements ICommandHandler<SubmitGeneration
           new DomainEvent(
             'generation.failed',
             requestId,
-            { error: message, callerService: command.callerService },
+            {
+              error: message,
+              callerService: command.callerService,
+              metadata: command.metadata,
+            },
+            undefined,
+            command.callerService,
           ),
         );
       });
