@@ -45,9 +45,6 @@ export class SdkProvider implements AiProvider {
       'Starting SDK generation',
     );
 
-    const noToolsDirective = 'IMPORTANT: You are a text generation service. Respond with text directly. Do NOT use any tools — no Bash, Read, Write, Edit, TodoWrite, or any other tool calls. Just output your response as plain text.';
-    const systemPrompt = `${noToolsDirective}\n\n${request.systemPrompt}`;
-
     let userPrompt = request.userPrompt;
     if (request.jsonSchema) {
       userPrompt = `${request.userPrompt}\n\nYou MUST respond with ONLY valid JSON matching this schema (no markdown, no explanation, just the JSON object):\n${JSON.stringify(request.jsonSchema, null, 2)}`;
@@ -57,21 +54,9 @@ export class SdkProvider implements AiProvider {
       prompt: userPrompt,
       options: {
         model,
-        systemPrompt,
-        disallowedTools: [
-          'Bash', 'Read', 'Edit', 'Write', 'Glob', 'Grep',
-          'WebSearch', 'WebFetch', 'Agent', 'Skill', 'Monitor',
-          'NotebookEdit', 'SendUserFile', 'ToolSearch',
-          'EnterPlanMode', 'ExitPlanMode',
-          'Workflow', 'TaskCreate', 'TaskGet', 'TaskList', 'TaskOutput', 'TaskStop', 'TaskUpdate',
-          'CronCreate', 'CronDelete', 'CronList',
-          'PushNotification', 'RemoteTrigger', 'ScheduleWakeup',
-          'EnterWorktree', 'ExitWorktree',
-          'ListMcpResourcesTool', 'ReadMcpResourceTool',
-          'AskUserQuestion',
-          'TodoRead', 'TodoWrite',
-        ],
-        maxTurns: 5,
+        systemPrompt: request.systemPrompt,
+        tools: [],
+        maxTurns: 1,
         persistSession: false,
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
