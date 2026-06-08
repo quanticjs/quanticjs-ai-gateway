@@ -26,43 +26,17 @@
       "Bash(docker ps*)"
     ]
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-destructive.sh\"",
-            "timeout": 5
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-secrets.sh\"",
-            "timeout": 10
-          },
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/auto-format.sh\"",
-            "timeout": 15
-          }
-        ]
+  "extraKnownMarketplaces": {
+    "quanticjs-standards": {
+      "source": {
+        "source": "github",
+        "repo": "quanticjs/quanticjs-standards"
       }
-    ],
-    "Notification": [
-      {
-        "matcher": "compact",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/on-compaction.sh\"",
-            "timeout": 10
-          }
-        ]
-      }
-    ]
+    }
   },
   "enabledPlugins": {
-    "frontend-design@claude-plugins-official": true
+    "frontend-design@claude-plugins-official": true,
+    "quanticjs-hooks@quanticjs-standards": true,
+    "quanticjs-scaffolding@quanticjs-standards": true
   }
 }
