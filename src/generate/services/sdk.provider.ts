@@ -60,8 +60,14 @@ export class SdkProvider implements AiProvider {
           'WebSearch', 'WebFetch', 'Agent', 'Skill', 'Monitor',
           'NotebookEdit', 'SendUserFile', 'ToolSearch',
           'EnterPlanMode', 'ExitPlanMode',
+          'Workflow', 'TaskCreate', 'TaskGet', 'TaskList', 'TaskOutput', 'TaskStop', 'TaskUpdate',
+          'CronCreate', 'CronDelete', 'CronList',
+          'PushNotification', 'RemoteTrigger', 'ScheduleWakeup',
+          'EnterWorktree', 'ExitWorktree',
+          'ListMcpResourcesTool', 'ReadMcpResourceTool',
+          'AskUserQuestion',
         ],
-        maxTurns: 1,
+        maxTurns: 3,
         persistSession: false,
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
@@ -81,11 +87,12 @@ export class SdkProvider implements AiProvider {
       throw new Error('SDK query returned no result message');
     }
 
-    if (resultMessage.is_error) {
-      throw new Error(`SDK generation error: ${resultMessage.result}`);
+    if (resultMessage.subtype !== 'success') {
+      const errors = resultMessage.errors?.join(', ') ?? 'unknown';
+      throw new Error(`SDK generation failed (${resultMessage.subtype}): ${errors}`);
     }
 
-    let content = resultMessage.result ?? '';
+    let content: string = resultMessage.result ?? '';
 
     if (request.jsonSchema && content) {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
@@ -99,7 +106,7 @@ export class SdkProvider implements AiProvider {
     const durationMs = Date.now() - startTime;
 
     this.logger.info(
-      { model, inputTokens, outputTokens, costUsd, durationMs, numTurns: resultMessage.num_turns },
+      { model, inputTokens, outputTokens, costUsd, durationMs, numTurns: resultMessage.num_turns, subtype: resultMessage.subtype, contentLength: content.length },
       'SDK generation complete',
     );
 
