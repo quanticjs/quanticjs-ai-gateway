@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { CqrsModule } from '@nestjs/cqrs';
 import { GenerateController } from './controllers/generate.controller';
 import { GenerateSyncHandler } from './commands/generate-sync.handler';
 import { GenerateSyncValidator } from './commands/generate-sync.validator';
@@ -13,7 +12,7 @@ import { AI_PROVIDER } from './services/ai-provider.interface';
 import { GenerateMetrics } from './generate.metrics';
 
 @Module({
-  imports: [CqrsModule],
+  imports: [],
   controllers: [GenerateController],
   providers: [
     GenerateSyncHandler,
