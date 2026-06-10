@@ -1,6 +1,8 @@
-import { Validate } from '@quanticjs/core';
+import { Log, Validate } from '@quanticjs/core';
 import { GenerateSyncValidator } from './generate-sync.validator';
 
+// Prompts stay out of logs; only operational fields are allowlisted
+@Log({ logPayload: true, logInclude: ['model', 'maxTokens', 'purpose', 'callerService'] })
 @Validate(GenerateSyncValidator)
 export class GenerateSyncCommand {
   constructor(

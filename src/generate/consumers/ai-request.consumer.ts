@@ -25,9 +25,7 @@ export class AiRequestConsumer extends CqrsKafkaConsumer {
   }
 
   mapToCommand(event: KafkaEvent): ICommand | null {
-    const payload = typeof event.payload === 'string'
-      ? JSON.parse(event.payload) as Record<string, unknown>
-      : event.payload;
+    const payload = event.payload;
 
     const systemPrompt = payload['systemPrompt'] as string;
     const userPrompt = payload['userPrompt'] as string;

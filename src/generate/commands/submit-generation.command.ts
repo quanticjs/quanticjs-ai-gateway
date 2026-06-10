@@ -1,6 +1,8 @@
-import { Validate } from '@quanticjs/core';
+import { Log, Validate } from '@quanticjs/core';
 import { SubmitGenerationValidator } from './submit-generation.validator';
 
+// Prompts stay out of logs; only operational fields are allowlisted
+@Log({ logPayload: true, logInclude: ['model', 'maxTokens', 'purpose', 'callerService'] })
 @Validate(SubmitGenerationValidator)
 export class SubmitGenerationCommand {
   constructor(

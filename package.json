@@ -31,6 +31,7 @@
     "@quanticjs/health": "^7.0.0",
     "@quanticjs/metrics": "^7.0.0",
     "@quanticjs/quanticjs": "^7.0.0",
+    "@quanticjs/redis": "^7.0.0",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "ioredis": "^5.4.0",
