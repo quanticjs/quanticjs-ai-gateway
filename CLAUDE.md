@@ -52,9 +52,12 @@
 | `ANTHROPIC_API_KEY` | Anthropic API key | — |
 | `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token for SDK | — |
 | `EMBEDDING_PROVIDER` | Embedding provider selection (`openai` \| `tei`) | `tei` |
-| `OPENAI_API_KEY` | OpenAI API key (required for `openai` embeddings) | — |
+| `OPENAI_API_KEY` | OpenAI / Azure OpenAI API key (required for `openai` embeddings) | — |
 | `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model | `text-embedding-3-small` |
-| `OPENAI_BASE_URL` | OpenAI API base URL | `https://api.openai.com/v1` |
+| `OPENAI_BASE_URL` | OpenAI API base URL (set to an `*.azure.com` endpoint to use Azure) | `https://api.openai.com/v1` |
+| `OPENAI_API_TYPE` | Force dialect (`openai` \| `azure`); auto-detected from `*.azure.com` host | — |
+| `AZURE_OPENAI_DEPLOYMENT` | Azure deployment name | `OPENAI_EMBEDDING_MODEL` |
+| `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version | `2024-10-21` |
 | `TEI_URL` | TEI service URL | `http://text-embeddings:8080` |
 | `KAFKA_BROKERS` | Kafka broker addresses (comma-separated) | `localhost:9092` |
 | `KAFKA_SSL` | Enable Kafka SSL | — |

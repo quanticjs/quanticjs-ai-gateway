@@ -19,6 +19,9 @@ export class OpenAiProvider implements EmbeddingProvider {
   private readonly apiKey: string;
   private readonly baseUrl: string;
   private readonly model: string;
+  private readonly isAzure: boolean;
+  private readonly azureDeployment: string;
+  private readonly azureApiVersion: string;
   private readonly breaker;
 
   constructor(
@@ -27,8 +30,17 @@ export class OpenAiProvider implements EmbeddingProvider {
     private readonly metrics: EmbedMetrics,
   ) {
     this.apiKey = this.config.get('OPENAI_API_KEY', '');
-    this.baseUrl = this.config.get('OPENAI_BASE_URL', 'https://api.openai.com/v1');
+    // Trailing slash trimmed so URL joins are predictable for both dialects.
+    this.baseUrl = this.config.get('OPENAI_BASE_URL', 'https://api.openai.com/v1').replace(/\/+$/, '');
     this.model = this.config.get('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small');
+
+    // Azure OpenAI speaks a different dialect: api-key header + /openai/deployments/{name}
+    // /embeddings?api-version=... Auto-detected from the host, overridable via OPENAI_API_TYPE.
+    const apiType = this.config.get('OPENAI_API_TYPE', '');
+    this.isAzure = apiType === 'azure' || /\.azure\.com/i.test(this.baseUrl);
+    // Azure routes by deployment name, which often (but not always) matches the model name.
+    this.azureDeployment = this.config.get('AZURE_OPENAI_DEPLOYMENT', this.model);
+    this.azureApiVersion = this.config.get('AZURE_OPENAI_API_VERSION', '2024-10-21');
 
     if (!this.apiKey) {
       this.logger.warn('OPENAI_API_KEY not set — OpenAiProvider will fail on embed calls');
@@ -53,20 +65,30 @@ export class OpenAiProvider implements EmbeddingProvider {
     }
 
     const startTime = Date.now();
-    this.logger.info({ inputCount: inputs.length, model: this.model }, 'Starting OpenAI embedding request');
+    const dialect = this.isAzure ? 'Azure OpenAI' : 'OpenAI';
+    this.logger.info({ inputCount: inputs.length, model: this.model, dialect }, `Starting ${dialect} embedding request`);
+
+    // Azure: api-key header, deployment-scoped path, api-version query param, no model in body
+    // (the deployment selects the model). Standard OpenAI: Bearer auth, model in body.
+    const url = this.isAzure
+      ? `${this.baseUrl}/openai/deployments/${this.azureDeployment}/embeddings?api-version=${this.azureApiVersion}`
+      : `${this.baseUrl}/embeddings`;
+    const headers: Record<string, string> = this.isAzure
+      ? { 'Content-Type': 'application/json', 'api-key': this.apiKey }
+      : { 'Content-Type': 'application/json', Authorization: `Bearer ${this.apiKey}` };
+    const body = this.isAzure
+      ? JSON.stringify({ input: inputs })
+      : JSON.stringify({ model: this.model, input: inputs });
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 60 * 1000);
 
     let response: Response;
     try {
-      response = await fetch(`${this.baseUrl}/embeddings`, {
+      response = await fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({ model: this.model, input: inputs }),
+        headers,
+        body,
         signal: controller.signal,
       });
     } finally {
@@ -74,12 +96,12 @@ export class OpenAiProvider implements EmbeddingProvider {
     }
 
     if (!response.ok) {
-      const body = await response.text();
+      const errBody = await response.text();
       this.logger.error(
-        { status: response.status, body: body.substring(0, 300) },
-        'OpenAI embedding request failed',
+        { status: response.status, body: errBody.substring(0, 300), dialect },
+        `${dialect} embedding request failed`,
       );
-      throw new Error(`OpenAI request failed: ${response.status}`);
+      throw new Error(`${dialect} request failed: ${response.status}`);
     }
 
     const data = (await response.json()) as OpenAiEmbeddingResponse;
