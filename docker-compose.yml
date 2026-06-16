@@ -1,0 +1,72 @@
+services:
+  ai-gateway:
+    build:
+      context: .
+      target: development
+    ports:
+      - "3005:3005"
+    env_file:
+      - .env
+    environment:
+      # Infra connection strings use Docker hostnames — these override any
+      # values in .env (env_file is loaded first, environment wins).
+      PORT: 3005
+      REDIS_URL: redis://redis:6379
+      KAFKA_BROKERS: kafka:9092
+      TEI_URL: http://text-embeddings:8080
+    volumes:
+      - ./src:/app/src:cached
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      text-embeddings:
+        condition: service_healthy
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  text-embeddings:
+    image: ghcr.io/huggingface/text-embeddings-inference:cpu-1.5
+    command: ["--model-id", "BAAI/bge-small-en-v1.5", "--port", "8080"]
+    volumes:
+      - tei-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+
+  kafka:
+    image: redpandadata/redpanda:v24.2.7
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --overprovisioned
+      - --node-id=0
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://kafka:9092
+    volumes:
+      - kafka-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -q 'Healthy:.*true'"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+volumes:
+  redis-data:
+  kafka-data:
+  tei-data:

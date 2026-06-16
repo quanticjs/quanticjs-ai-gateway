@@ -51,6 +51,10 @@
 | `AI_MODEL` | Default model | `claude-sonnet-4-5-20250929` |
 | `ANTHROPIC_API_KEY` | Anthropic API key | — |
 | `CLAUDE_CODE_OAUTH_TOKEN` | OAuth token for SDK | — |
+| `EMBEDDING_PROVIDER` | Embedding provider selection (`openai` \| `tei`) | `tei` |
+| `OPENAI_API_KEY` | OpenAI API key (required for `openai` embeddings) | — |
+| `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model | `text-embedding-3-small` |
+| `OPENAI_BASE_URL` | OpenAI API base URL | `https://api.openai.com/v1` |
 | `TEI_URL` | TEI service URL | `http://text-embeddings:8080` |
 | `KAFKA_BROKERS` | Kafka broker addresses (comma-separated) | `localhost:9092` |
 | `KAFKA_SSL` | Enable Kafka SSL | — |
