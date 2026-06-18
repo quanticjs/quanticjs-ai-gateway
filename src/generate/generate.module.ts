@@ -8,6 +8,7 @@ import { SubmitGenerationValidator } from './commands/submit-generation.validato
 import { AiRequestConsumer } from './consumers/ai-request.consumer';
 import { SdkProvider } from './services/sdk.provider';
 import { AnthropicProvider } from './services/anthropic.provider';
+import { MediaFetcher } from './services/media-fetcher';
 import { AI_PROVIDER } from './services/ai-provider.interface';
 import { GenerateMetrics } from './generate.metrics';
 
@@ -21,6 +22,7 @@ import { GenerateMetrics } from './generate.metrics';
     SubmitGenerationValidator,
     AiRequestConsumer,
     GenerateMetrics,
+    MediaFetcher,
     SdkProvider,
     AnthropicProvider,
     {

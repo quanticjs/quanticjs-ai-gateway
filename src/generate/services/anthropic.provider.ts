@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createCircuitBreaker } from '@quanticjs/core';
 import type { AiProvider, AiGenerateRequest, AiGenerateResponse } from './ai-provider.interface';
+import { MediaFetcher, toAnthropicContentBlock } from './media-fetcher';
 import { GenerateMetrics } from '../generate.metrics';
 
 const BREAKER_STATE: Record<string, number> = { closed: 0, 'half-open': 1, open: 2 };
@@ -26,6 +27,7 @@ export class AnthropicProvider implements AiProvider {
     private readonly config: ConfigService,
     @InjectPinoLogger(AnthropicProvider.name) private readonly logger: PinoLogger,
     private readonly metrics: GenerateMetrics,
+    private readonly mediaFetcher: MediaFetcher,
   ) {
     this.apiKey = this.config.get('ANTHROPIC_API_KEY', '');
     this.defaultModel = this.config.get('AI_MODEL', 'claude-sonnet-4-5-20250929');
@@ -56,16 +58,27 @@ export class AnthropicProvider implements AiProvider {
     const maxTokens = request.maxTokens || 8192;
     const startTime = Date.now();
 
+    const fetched = request.media?.length ? await this.mediaFetcher.fetchAll(request.media) : [];
+
     this.logger.info(
-      { promptLength: request.userPrompt.length, model, hasSchema: !!request.jsonSchema },
+      {
+        promptLength: request.userPrompt.length,
+        model,
+        hasSchema: !!request.jsonSchema,
+        mediaCount: fetched.length,
+      },
       'Starting Anthropic API call',
     );
+
+    const userContent: unknown = fetched.length
+      ? [...fetched.map((m) => toAnthropicContentBlock(m)), { type: 'text', text: request.userPrompt }]
+      : request.userPrompt;
 
     const body: Record<string, unknown> = {
       model,
       max_tokens: maxTokens,
       system: request.systemPrompt,
-      messages: [{ role: 'user', content: request.userPrompt }],
+      messages: [{ role: 'user', content: userContent }],
     };
 
     if (request.jsonSchema) {

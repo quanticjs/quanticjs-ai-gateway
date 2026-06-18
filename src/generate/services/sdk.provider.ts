@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createCircuitBreaker } from '@quanticjs/core';
 import type { AiProvider, AiGenerateRequest, AiGenerateResponse } from './ai-provider.interface';
+import { MediaFetcher, toAnthropicContentBlock } from './media-fetcher';
 import { GenerateMetrics } from '../generate.metrics';
 
 const BREAKER_STATE: Record<string, number> = { closed: 0, 'half-open': 1, open: 2 };
@@ -18,6 +19,7 @@ export class SdkProvider implements AiProvider {
     private readonly config: ConfigService,
     @InjectPinoLogger(SdkProvider.name) private readonly logger: PinoLogger,
     private readonly metrics: GenerateMetrics,
+    private readonly mediaFetcher: MediaFetcher,
   ) {
     this.defaultModel = this.config.get('AI_MODEL', 'claude-sonnet-4-5-20250929');
 
@@ -40,8 +42,10 @@ export class SdkProvider implements AiProvider {
     const model = request.model ?? this.defaultModel;
     const startTime = Date.now();
 
+    const fetched = request.media?.length ? await this.mediaFetcher.fetchAll(request.media) : [];
+
     this.logger.info(
-      { promptLength: request.userPrompt.length, model, hasSchema: !!request.jsonSchema },
+      { promptLength: request.userPrompt.length, model, hasSchema: !!request.jsonSchema, mediaCount: fetched.length },
       'Starting SDK generation',
     );
 
@@ -50,8 +54,30 @@ export class SdkProvider implements AiProvider {
       userPrompt = `${request.userPrompt}\n\nYou MUST respond with ONLY valid JSON matching this schema (no markdown, no explanation, just the JSON object):\n${JSON.stringify(request.jsonSchema, null, 2)}`;
     }
 
+    // Text-only: pass the plain string prompt (unchanged path).
+    // With media: switch to the SDK's streaming-input mode, yielding one user
+    // message whose content is Anthropic content blocks (image/document + text).
+    // SDKUserMessage.message is the standard Anthropic MessageParam, so the same
+    // block shape works. NOTE (local-only path): the exact input envelope is
+    // version-sensitive — verify with a live smoke test against the Agent SDK.
+    let prompt: unknown = userPrompt;
+    if (fetched.length) {
+      const content = [
+        ...fetched.map((m) => toAnthropicContentBlock(m)),
+        { type: 'text', text: userPrompt },
+      ];
+      prompt = (async function* () {
+        yield {
+          type: 'user',
+          message: { role: 'user', content },
+          parent_tool_use_id: null,
+          session_id: '',
+        };
+      })();
+    }
+
     const conversation = query({
-      prompt: userPrompt,
+      prompt: prompt as any,
       options: {
         model,
         systemPrompt: request.systemPrompt,

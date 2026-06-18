@@ -14,6 +14,7 @@ describe('GenerateSyncValidator', () => {
       overrides.jsonSchema,
       overrides.purpose,
       overrides.callerService,
+      overrides.media,
     );
   }
 
@@ -79,5 +80,41 @@ describe('GenerateSyncValidator', () => {
     const result = validator.validate(cmd({ callerService: 'x'.repeat(101) }));
     expect(result.isSuccess).toBe(false);
     expect(result.errorType).toBe(ErrorType.ValidationError);
+  });
+
+  describe('media', () => {
+    const validMedia = [
+      { url: 'http://files:9000/a.pdf?sig=x', kind: 'document' as const, mediaType: 'application/pdf' },
+      { url: 'https://files/b.png', kind: 'image' as const, mediaType: 'image/png', fileName: 'b.png' },
+    ];
+
+    it('should pass with valid media refs', () => {
+      const result = validator.validate(cmd({ media: validMedia }));
+      expect(result.isSuccess).toBe(true);
+    });
+
+    it('should pass with no media (optional)', () => {
+      const result = validator.validate(cmd({ media: undefined }));
+      expect(result.isSuccess).toBe(true);
+    });
+
+    it('should fail when a media url is not a valid URL', () => {
+      const result = validator.validate(cmd({ media: [{ url: 'not-a-url', kind: 'document', mediaType: 'application/pdf' }] }));
+      expect(result.isSuccess).toBe(false);
+      expect(result.errorType).toBe(ErrorType.ValidationError);
+    });
+
+    it('should fail when media kind is not document/image', () => {
+      const result = validator.validate(cmd({ media: [{ url: 'http://f/a', kind: 'video' as never, mediaType: 'video/mp4' }] }));
+      expect(result.isSuccess).toBe(false);
+      expect(result.errorType).toBe(ErrorType.ValidationError);
+    });
+
+    it('should fail when media array exceeds the cap', () => {
+      const many = Array.from({ length: 11 }, () => validMedia[0]!);
+      const result = validator.validate(cmd({ media: many }));
+      expect(result.isSuccess).toBe(false);
+      expect(result.errorType).toBe(ErrorType.ValidationError);
+    });
   });
 });

@@ -1,7 +1,9 @@
 import { Log, Validate } from '@quanticjs/core';
 import { GenerateSyncValidator } from './generate-sync.validator';
+import type { AiMediaRef } from '../services/ai-provider.interface';
 
-// Prompts stay out of logs; only operational fields are allowlisted
+// Prompts and media URLs (presigned — may carry signatures) stay out of logs;
+// only operational fields are allowlisted.
 @Log({ logPayload: true, logInclude: ['model', 'maxTokens', 'purpose', 'callerService'] })
 @Validate(GenerateSyncValidator)
 export class GenerateSyncCommand {
@@ -13,5 +15,6 @@ export class GenerateSyncCommand {
     public readonly jsonSchema: Record<string, unknown> | undefined,
     public readonly purpose: string | undefined,
     public readonly callerService: string | undefined,
+    public readonly media: AiMediaRef[] | undefined = undefined,
   ) {}
 }

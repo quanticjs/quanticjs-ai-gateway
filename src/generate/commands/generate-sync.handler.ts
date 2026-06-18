@@ -23,6 +23,7 @@ export class GenerateSyncHandler implements ICommandHandler<GenerateSyncCommand>
         maxTokens: command.maxTokens,
         model: command.model,
         jsonSchema: command.jsonSchema,
+        media: command.media,
       });
 
       this.metrics.requestsTotal.inc({ status: 'success' });

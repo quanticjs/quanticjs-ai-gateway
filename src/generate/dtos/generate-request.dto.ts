@@ -1,5 +1,41 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsOptional, IsInt, Min, Max, MaxLength, IsObject } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  MaxLength,
+  IsObject,
+  IsArray,
+  ValidateNested,
+  IsIn,
+  IsUrl,
+  ArrayMaxSize,
+} from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class MediaRefDto {
+  @ApiProperty({ description: 'URL the gateway fetches server-side (e.g. presigned read URL)' })
+  @IsUrl({ require_tld: false })
+  @MaxLength(4096)
+  url!: string;
+
+  @ApiProperty({ description: 'How the model should treat the file', enum: ['document', 'image'] })
+  @IsIn(['document', 'image'])
+  kind!: 'document' | 'image';
+
+  @ApiProperty({ description: 'IANA media type, e.g. application/pdf or image/png' })
+  @IsString()
+  @MaxLength(255)
+  mediaType!: string;
+
+  @ApiPropertyOptional({ description: 'Original file name (for logging/labels)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  fileName?: string;
+}
 
 export class GenerateRequestDto {
   @ApiProperty({ description: 'System prompt for the AI model' })
@@ -46,4 +82,15 @@ export class GenerateRequestDto {
   @IsOptional()
   @IsObject()
   metadata?: Record<string, unknown>;
+
+  @ApiPropertyOptional({
+    description: 'Multimodal file references; the gateway fetches each URL and forwards bytes to the model',
+    type: [MediaRefDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(10)
+  @ValidateNested({ each: true })
+  @Type(() => MediaRefDto)
+  media?: MediaRefDto[];
 }
