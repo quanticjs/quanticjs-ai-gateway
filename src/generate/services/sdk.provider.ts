@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createCircuitBreaker } from '@quanticjs/core';
 import type { AiProvider, AiGenerateRequest, AiGenerateResponse } from './ai-provider.interface';
-import { MediaFetcher, toAnthropicContentBlock } from './media-fetcher';
+import { MediaFetcher, extractMediaText } from './media-fetcher';
 import { GenerateMetrics } from '../generate.metrics';
 
 const BREAKER_STATE: Record<string, number> = { closed: 0, 'half-open': 1, open: 2 };
@@ -50,31 +50,29 @@ export class SdkProvider implements AiProvider {
     );
 
     let userPrompt = request.userPrompt;
-    if (request.jsonSchema) {
-      userPrompt = `${request.userPrompt}\n\nYou MUST respond with ONLY valid JSON matching this schema (no markdown, no explanation, just the JSON object):\n${JSON.stringify(request.jsonSchema, null, 2)}`;
+
+    // The Agent SDK / Claude Code subprocess does NOT accept inline media content
+    // blocks (image/document) — they make the subprocess exit 1. Instead, extract
+    // the document text here and inline it as plain text, keeping the working
+    // text-only prompt path. (Images have no text and are filtered upstream.)
+    if (fetched.length) {
+      const attachments = await Promise.all(
+        fetched.map(async (m) => {
+          const text = await extractMediaText(m);
+          const name = m.fileName ?? 'attachment';
+          return `\n\n<attachment name="${name}" type="${m.mediaType}">\n${text}\n</attachment>`;
+        }),
+      );
+      userPrompt = `${userPrompt}${attachments.join('')}`;
     }
 
-    // Text-only: pass the plain string prompt (unchanged path).
-    // With media: switch to the SDK's streaming-input mode, yielding one user
-    // message whose content is Anthropic content blocks (image/document + text).
-    // SDKUserMessage.message is the standard Anthropic MessageParam, so the same
-    // block shape works. NOTE (local-only path): the exact input envelope is
-    // version-sensitive — verify with a live smoke test against the Agent SDK.
-    let prompt: unknown = userPrompt;
-    if (fetched.length) {
-      const content = [
-        ...fetched.map((m) => toAnthropicContentBlock(m)),
-        { type: 'text', text: userPrompt },
-      ];
-      prompt = (async function* () {
-        yield {
-          type: 'user',
-          message: { role: 'user', content },
-          parent_tool_use_id: null,
-          session_id: '',
-        };
-      })();
+    if (request.jsonSchema) {
+      userPrompt = `${userPrompt}\n\nYou MUST respond with ONLY valid JSON matching this schema (no markdown, no explanation, just the JSON object):\n${JSON.stringify(request.jsonSchema, null, 2)}`;
     }
+
+    // Always a plain string prompt — text-only is the only input mode the Agent
+    // SDK reliably accepts.
+    const prompt: unknown = userPrompt;
 
     const conversation = query({
       prompt: prompt as any,

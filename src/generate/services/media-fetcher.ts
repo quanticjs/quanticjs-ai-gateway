@@ -22,6 +22,35 @@ export function toAnthropicContentBlock(m: FetchedMedia): Record<string, unknown
   };
 }
 
+/**
+ * Extracts plain text from fetched media for providers that cannot ingest inline
+ * media content blocks (the Agent SDK / Claude Code subprocess). `text/*` is
+ * decoded directly; PDFs are parsed with `pdf-parse`. Images are unsupported
+ * (no OCR) and throw — callers must filter them out first.
+ */
+export async function extractMediaText(m: FetchedMedia): Promise<string> {
+  const buffer = Buffer.from(m.base64, 'base64');
+  const type = m.mediaType.toLowerCase();
+
+  if (type.startsWith('text/')) {
+    return buffer.toString('utf8');
+  }
+
+  if (type === 'application/pdf') {
+    // Import the parser directly (the package root runs debug side-effects on load).
+    // The specifier is a non-literal string so TS skips module-type resolution
+    // (pdf-parse ships no types for this subpath).
+    const spec: string = 'pdf-parse/lib/pdf-parse.js';
+    const pdfParse = (await import(spec)).default as (
+      data: Buffer,
+    ) => Promise<{ text: string }>;
+    const parsed = await pdfParse(buffer);
+    return parsed.text;
+  }
+
+  throw new Error(`Cannot extract text from media type: ${m.mediaType}`);
+}
+
 const DEFAULT_MAX_BYTES = 10 * 1024 * 1024; // 10 MB — mirrors the conversation attachment cap
 const DEFAULT_TIMEOUT_MS = 30_000;
 
