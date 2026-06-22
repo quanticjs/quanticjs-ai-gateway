@@ -3,7 +3,8 @@ import { ConfigService } from '@nestjs/config';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createCircuitBreaker } from '@quanticjs/core';
 import type { AiProvider, AiGenerateRequest, AiGenerateResponse } from './ai-provider.interface';
-import { MediaFetcher, extractMediaText } from './media-fetcher';
+import { MediaFetcher } from './media-fetcher';
+import { TikaExtractor } from './tika-extractor.service';
 import { GenerateMetrics } from '../generate.metrics';
 
 const BREAKER_STATE: Record<string, number> = { closed: 0, 'half-open': 1, open: 2 };
@@ -20,6 +21,7 @@ export class SdkProvider implements AiProvider {
     @InjectPinoLogger(SdkProvider.name) private readonly logger: PinoLogger,
     private readonly metrics: GenerateMetrics,
     private readonly mediaFetcher: MediaFetcher,
+    private readonly tika: TikaExtractor,
   ) {
     this.defaultModel = this.config.get('AI_MODEL', 'claude-sonnet-4-5-20250929');
 
@@ -53,16 +55,18 @@ export class SdkProvider implements AiProvider {
 
     // The Agent SDK / Claude Code subprocess does NOT accept inline media content
     // blocks (image/document) — they make the subprocess exit 1. Instead, extract
-    // the document text here and inline it as plain text, keeping the working
-    // text-only prompt path. (Images have no text and are filtered upstream.)
+    // the document text via Tika here and inline it as plain text, keeping the
+    // working text-only prompt path. Images yield no text and are skipped.
     if (fetched.length) {
-      const attachments = await Promise.all(
-        fetched.map(async (m) => {
-          const text = await extractMediaText(m);
-          const name = m.fileName ?? 'attachment';
-          return `\n\n<attachment name="${name}" type="${m.mediaType}">\n${text}\n</attachment>`;
-        }),
+      const extracted = await Promise.all(
+        fetched.map(async (m) => ({ media: m, text: await this.tika.extract(m) })),
       );
+      const attachments = extracted
+        .filter(({ text }) => text.length > 0)
+        .map(({ media, text }) => {
+          const name = media.fileName ?? 'attachment';
+          return `\n\n<attachment name="${name}" type="${media.mediaType}">\n${text}\n</attachment>`;
+        });
       userPrompt = `${userPrompt}${attachments.join('')}`;
     }
 

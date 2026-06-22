@@ -59,6 +59,8 @@
 | `AZURE_OPENAI_DEPLOYMENT` | Azure deployment name | `OPENAI_EMBEDDING_MODEL` |
 | `AZURE_OPENAI_API_VERSION` | Azure OpenAI API version | `2024-10-21` |
 | `TEI_URL` | TEI service URL | `http://text-embeddings:8080` |
+| `TIKA_URL` | Apache Tika server URL (document text extraction for `/generate`) | `http://tika:9998` |
+| `TIKA_TIMEOUT_MS` | Tika request timeout | `30000` |
 | `KAFKA_BROKERS` | Kafka broker addresses (comma-separated) | `localhost:9092` |
 | `KAFKA_SSL` | Enable Kafka SSL | — |
 | `KAFKA_SASL_USERNAME` | Kafka SASL username | — |

@@ -14,6 +14,7 @@ services:
       REDIS_URL: redis://redis:6379
       KAFKA_BROKERS: kafka:9092
       TEI_URL: http://text-embeddings:8080
+      TIKA_URL: http://tika:9998
     volumes:
       - ./src:/app/src:cached
     depends_on:
@@ -23,6 +24,8 @@ services:
         condition: service_healthy
       text-embeddings:
         condition: service_healthy
+      tika:
+        condition: service_started
 
   redis:
     image: redis:7-alpine
@@ -46,6 +49,11 @@ services:
       timeout: 5s
       retries: 10
       start_period: 60s
+
+  tika:
+    # Apache Tika server — extracts plain text from PDF/Office/HTML/etc. for the
+    # /generate document path. Same engine Solr uses, but gateway-owned.
+    image: apache/tika:2.9.2.1-full
 
   kafka:
     image: redpandadata/redpanda:v24.2.7
